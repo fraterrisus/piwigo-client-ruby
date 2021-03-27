@@ -9,11 +9,12 @@ module Requests
       @response = invoke
       handle_errors!
       set_variables
+      self
     end
 
     private
 
-    attr_reader :json_body
+    attr_reader :json_body, :response
 
     def piwigo_method
       'pwg.session.getStatus'
@@ -23,9 +24,7 @@ module Requests
       raise("Check Session request failed (response code #{response.code})") unless response.success?
 
       @json_body = JSON.parse(@response.body)
-      unless @json_body['stat'] == 'ok'
-        raise("Check Session request failed: #{@json_body['message']}")
-      end
+      raise("Check Session request failed: #{@json_body['message']}") unless @json_body['stat'] == 'ok'
     end
 
     def set_variables

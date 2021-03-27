@@ -13,7 +13,7 @@ module Requests
       # logger_level = opts[:logger_level] || :info
       # self.class.logger(opts[:logger], logger_level) if opts.key?(:logger)
 
-      self.class.debug_output($stderr)
+      # self.class.debug_output($stderr)
     end
 
     def run
@@ -23,17 +23,19 @@ module Requests
     private
 
     def invoke
-      options = {
-        headers: request_headers,
-        query: query_parameters,
-        body: request_body
-      }
-
-      self.class.send(http_verb, ENDPOINT, options)
+      self.class.send(http_verb, ENDPOINT, httparty_options)
     end
 
     def http_verb
       :get
+    end
+
+    def httparty_options
+      {
+        headers: request_headers,
+        query: query_parameters,
+        body: request_body
+      }
     end
 
     def raise_unless_required_opts!(opts, required)
@@ -68,7 +70,7 @@ module Requests
         headers['Accept'] = 'application/json'
         headers['Content-Type'] = 'application/x-www-form-urlencoded; charset=utf-8'
 
-        cookies = request_cookies.map { |k,v| "#{k}=#{v}" }.join('; ')
+        cookies = request_cookies.map { |k, v| "#{k}=#{v}" }.join('; ')
         headers['Cookie'] = cookies unless cookies.empty?
       end
     end

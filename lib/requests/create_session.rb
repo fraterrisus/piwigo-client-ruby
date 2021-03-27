@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
 module Requests
-  # Request class to perform login and capture auth cookies
+  # Request class to perform login and capture auth cookie
   class CreateSession < BaseRequest
     REQUIRED_OPTS = %i[username password].freeze
 
-    attr_reader :cookies
+    attr_reader :pwg_id
 
     def initialize(**opts)
       raise_unless_required_opts!(opts, REQUIRED_OPTS)
@@ -19,6 +19,7 @@ module Requests
       @response = invoke
       handle_errors!
       set_variables
+      self
     end
 
     private
@@ -45,11 +46,12 @@ module Requests
     end
 
     def set_variables
-      @cookies = {}
-      @response.headers.to_h['set-cookie'].each do |raw_cookie|
-        key, value = raw_cookie.split('=', 2)
-        @cookies[key] = value
-      end
+      raw_cookie = @response.headers.to_h['set-cookie'].find { |c| c.start_with?('pwg_id=') }
+      return unless raw_cookie
+
+      tokens = raw_cookie.split('=', 2)
+      tokens = tokens[1].split(';')
+      @pwg_id = tokens[0]
     end
   end
 end

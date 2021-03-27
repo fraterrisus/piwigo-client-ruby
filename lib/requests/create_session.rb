@@ -2,7 +2,7 @@
 
 module Requests
   # Request class to perform login and capture auth cookies
-  class LoginRequest < Requests::BaseRequest
+  class CreateSession < BaseRequest
     REQUIRED_OPTS = %i[username password].freeze
 
     attr_reader :cookies
@@ -18,18 +18,15 @@ module Requests
     def run
       @response = invoke
       handle_errors!
-      set_cookies
+      set_variables
     end
 
     private
 
     attr_reader :json_body, :password, :response, :username
 
-    def handle_errors!
-      raise("Login request failed (response code #{response.code})") unless response.success?
-
-      @json_body = JSON.parse(@response.body)
-      raise("Login request failed: #{@json_body['message']}") unless @json_body['stat'] == 'ok'
+    def http_verb
+      :post
     end
 
     def piwigo_method
@@ -40,7 +37,14 @@ module Requests
       super.merge(username: username, password: password)
     end
 
-    def set_cookies
+    def handle_errors!
+      raise("Login request failed (response code #{response.code})") unless response.success?
+
+      @json_body = JSON.parse(@response.body)
+      raise("Login request failed: #{@json_body['message']}") unless @json_body['stat'] == 'ok'
+    end
+
+    def set_variables
       @cookies = {}
       @response.headers.to_h['set-cookie'].each do |raw_cookie|
         key, value = raw_cookie.split('=', 2)

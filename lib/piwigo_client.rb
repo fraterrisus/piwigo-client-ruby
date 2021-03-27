@@ -5,6 +5,7 @@ require_relative 'requests/authenticated_request'
 
 require_relative 'requests/check_session_status'
 require_relative 'requests/create_session'
+require_relative 'requests/get_categories'
 require_relative 'requests/upload_image_chunk'
 
 # Client class for interacting with a Piwigo installation.
@@ -33,6 +34,11 @@ class PiwigoClient
     @pwg_token = req.pwg_token
     @chunk_size = req.chunk_size * 1000
     true
+  end
+
+  def get_categories
+    req = Requests::GetCategories.new(**basic_options).run
+    req.categories
   end
 
   def upload_file(filename, category_id)

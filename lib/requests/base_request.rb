@@ -17,13 +17,25 @@ module Requests
     end
 
     def run
-      raise(NoMethodError, 'Request class must implement #run')
+      @response = invoke
+      handle_errors!
+      set_variables
+      self
     end
 
     private
 
+    attr_reader :response, :json_body
+
     def invoke
       self.class.send(http_verb, ENDPOINT, httparty_options)
+    end
+
+    def handle_errors!
+      raise("Request failed (response code #{response.code})") unless response.success?
+
+      @json_body = JSON.parse(@response.body)
+      raise("Request failed: #{@json_body['message']}") unless @json_body['stat'] == 'ok'
     end
 
     def http_verb
@@ -73,6 +85,10 @@ module Requests
         cookies = request_cookies.map { |k, v| "#{k}=#{v}" }.join('; ')
         headers['Cookie'] = cookies unless cookies.empty?
       end
+    end
+
+    def set_variables
+      nil
     end
   end
 end

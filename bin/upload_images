@@ -10,6 +10,12 @@ require 'progress_bar'
 def convert_category(client, cat_name)
   categories = client.get_categories(false).map { |c| [c['id'], c] }.to_h
   matches = categories.keys.select { |id| categories[id]['name'].casecmp(cat_name).zero? }
+
+  if matches.count.zero?
+    $stderr.puts "No matches found for category '#{cat_name}'"
+    exit 1
+  end
+
   return matches.first if matches.count == 1
 
   $stderr.puts "Multiple matches found for category '#{cat_name}':"
@@ -127,13 +133,15 @@ client.login
 client.check_session_status
 
 if options['category'].is_a?(String)
-  options['category'] = convert_category(client, options['category'])
+  cat_name = options['category']
+  options['category'] = convert_category(client, cat_name)
+  puts "Uploading to category #{options['category']} \"#{cat_name}\""
 end
 
 pbar = ProgressBar.new(total_data, :bar, :percentage, :eta)
 options['files'].each do |filename|
   pbar.puts "Uploading #{filename}"
-  client.upload_file(filename, options['category_id'], pbar)
+  client.upload_file(filename, options['category'], pbar)
 end
 
 client.logout

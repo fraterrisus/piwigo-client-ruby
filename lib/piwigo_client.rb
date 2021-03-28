@@ -52,8 +52,9 @@ class PiwigoClient
     true
   end
 
-  def get_categories
-    req = Requests::GetCategories.new(**basic_options).run
+  def get_categories(tree = nil)
+    opts = basic_options.merge({ tree: tree }.compact)
+    req = Requests::GetCategories.new(**opts).run
     req.categories
   end
 

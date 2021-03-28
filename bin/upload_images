@@ -5,6 +5,56 @@ require_relative '../lib/piwigo_client'
 require 'optparse'
 require 'progress_bar'
 
+# ----------------------------------------------------------------------
+
+def convert_category(client, cat_name)
+  categories = client.get_categories(false).map { |c| [c['id'], c] }.to_h
+  matches = categories.keys.select { |id| categories[id]['name'].casecmp(cat_name).zero? }
+  return matches.first if matches.count == 1
+
+  $stderr.puts "Multiple matches found for category '#{cat_name}':"
+  matches.each do |id|
+    parent_ids = categories[id]['uppercats'].split(',').map(&:to_i)
+    fullname = parent_ids.map { |cid| categories[cid]['name'] }.join('::')
+    $stderr.puts "  (#{id}) #{fullname}"
+  end
+  exit 2
+end
+
+def get_file_list
+  [].tap do |file_list|
+    ARGV.each do |file|
+      if file.start_with? '@'
+        file_file = file[1..]
+        file_list += File.readlines(file_file).map(&:chomp)
+      else
+        file_list << file
+      end
+    end
+  end
+end
+
+def get_total_data_size(file_list)
+  errors = []
+
+  file_sizes = file_list.map do |filename|
+    begin
+      File.stat(filename).size
+    rescue Errno::ENOENT
+      errors << filename
+    end
+  end
+
+  if errors.any?
+    errors.each { |filename| $stderr.puts "Error: couldn't find file #{filename}" }
+    exit 1
+  end
+
+  file_sizes.sum
+end
+
+# ----------------------------------------------------------------------
+
 options = {
   'config' => '.piwigo.conf',
   'files' => []
@@ -31,8 +81,8 @@ parser = OptionParser.new do |opts|
 
   opts.separator ''
   opts.separator 'Image options:'
-  docstring = 'Piwigo category ID to upload files into (required)'
-  opts.on('-c', '--category ID', Integer, docstring) { |o| options['category_id'] = o }
+  docstring = 'Piwigo category to upload files into (required)'
+  opts.on('-c', '--category ID', docstring) { |o| options['category'] = o }
 
   opts.separator ''
   opts.separator 'Specifying files:'
@@ -52,17 +102,10 @@ elsif options['config'] != '.piwigo.conf'
   warn "Config file #{options['config']} not found; proceeding without it"
 end
 
-ARGV.each do |file|
-  if file.start_with? '@'
-    file_file = file[1..]
-    options['files'] += File.readlines(file_file).map(&:chomp)
-  else
-    options['files'] << file
-  end
-end
+options['files'] = get_file_list
 
-%w[base_uri username password category_id].each do |key|
-  unless key
+%w[base_uri username password category].each do |key|
+  unless options[key]
     $stderr.puts "Error: You must set a value for #{key}"
     puts parser
     exit
@@ -75,13 +118,17 @@ unless options['files'].any?
   exit
 end
 
-total_data = options['files'].map { |f| File.stat(f).size }.sum
+total_data = get_total_data_size(options['files'])
 
 puts "Connecting to Piwigo at #{options['base_uri']} with username #{options['username']}"
 client = PiwigoClient.new(base_uri: options['base_uri'], username: options['username'],
   password: options['password'])
 client.login
 client.check_session_status
+
+if options['category'].is_a?(String)
+  options['category'] = convert_category(client, options['category'])
+end
 
 pbar = ProgressBar.new(total_data, :bar, :percentage, :eta)
 options['files'].each do |filename|

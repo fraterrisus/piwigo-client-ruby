@@ -5,20 +5,16 @@ require_relative '../lib/piwigo_client'
 require 'optparse'
 
 options = {
+  'config' => '.piwigo.conf',
   'files' => []
 }
-
-if File.exist?('.piwigo.conf')
-  begin
-    options.merge!(JSON.parse(File.read('.piwigo.conf')))
-  rescue JSON::ParserError
-    puts "Error reading .piwigo.conf; is it a JSON file?"
-  end
-end
 
 parser = OptionParser.new do |opts|
   opts.banner = "Usage: #{$0} [options]"
 
+  docstring = 'Set location of JSON configuration file (default: .piwigo.conf). Command-line ' \
+    'options will override anything found in the config file.'
+  opts.on('--config FILE', docstring) { |o| options['config'] = o }
   opts.on('-h', '--help', 'Prints this help') do
     puts opts
     exit
@@ -33,25 +29,33 @@ parser = OptionParser.new do |opts|
   opts.on('-p', '--password PASSWORD', 'Password') { |p| options['password'] = p }
 
   opts.separator ''
-  opts.separator 'Image selection options:'
-  opts.on('-c', '--category ID', 'Piwigo category to upload files into (required)') do |o|
-    options['category_id'] = o
-  end
-  opts.on('-f', '--file FILENAME', 'File to upload; can be called multiple times. If FILENAME' \
-    ' starts with @, a list of files to upload will be read from that file.') do |o|
+  opts.separator 'Image options:'
+
+  docstring = 'Piwigo category ID to upload files into (required)'
+  opts.on('-c', '--category ID', Integer, docstring) { |o| options['category_id'] = o }
+
+  docstring = 'File to upload; can be called multiple times. If FILENAME starts with @, a list of' \
+    ' files to upload will be read from that file.'
+  opts.on('-f', '--file FILENAME', docstring) do |o|
     if o.start_with? '@'
       options['file_file'] = o[1..]
     else
       options['files'] << o
     end
   end
-
-  opts.separator ''
-  opts.separator 'Options will also be read from .piwigo.conf (in JSON format) if it exists in ' \
-    'the current directory.'
 end
 
 parser.parse!
+
+if File.exist?(options['config'])
+  begin
+    options = JSON.parse(File.read('.piwigo.conf')).merge(options)
+  rescue JSON::ParserError
+    puts "Error reading #{options['config']}; is it a JSON file?"
+  end
+elsif options['config'] != '.piwigo.conf'
+  warn "Config file #{options['config']} not found; proceeding without it"
+end
 
 if options['file_file']
   options['files'] += File.readlines(options['file_file']).map(&:chomp)
@@ -71,13 +75,14 @@ unless options['files'].any?
   exit
 end
 
+puts "Connecting to Piwigo at #{options['base_uri']} with username #{options['username']}"
 client = PiwigoClient.new(base_uri: options['base_uri'], username: options['username'],
   password: options['password'])
 client.login
 
 options['files'].each do |filename|
   puts "Uploading #{filename}"
-  client.upload_file(filename, options['category_id'])
+  # client.upload_file(filename, options['category_id'])
 end
 
 client.logout

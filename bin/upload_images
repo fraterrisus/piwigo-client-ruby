@@ -10,10 +10,10 @@ options = {
 }
 
 parser = OptionParser.new do |opts|
-  opts.banner = "Usage: #{$0} [options]"
+  opts.banner = "Usage: #{$0} [options] (file... | @list)"
 
-  docstring = 'Set location of JSON configuration file (default: .piwigo.conf). Command-line ' \
-    'options will override anything found in the config file.'
+  opts.separator ''
+  docstring = 'Set location of JSON configuration file (default: .piwigo.conf).'
   opts.on('--config FILE', docstring) { |o| options['config'] = o }
   opts.on('-h', '--help', 'Prints this help') do
     puts opts
@@ -30,19 +30,13 @@ parser = OptionParser.new do |opts|
 
   opts.separator ''
   opts.separator 'Image options:'
-
   docstring = 'Piwigo category ID to upload files into (required)'
   opts.on('-c', '--category ID', Integer, docstring) { |o| options['category_id'] = o }
 
-  docstring = 'File to upload; can be called multiple times. If FILENAME starts with @, a list of' \
-    ' files to upload will be read from that file.'
-  opts.on('-f', '--file FILENAME', docstring) do |o|
-    if o.start_with? '@'
-      options['file_file'] = o[1..]
-    else
-      options['files'] << o
-    end
-  end
+  opts.separator ''
+  opts.separator 'Specifying files:'
+  opts.separator '  List one or more files on the command line after the arguments.'
+  opts.separator '  If a filename starts with @, it will be treated as a newline-separated list of files.'
 end
 
 parser.parse!
@@ -57,8 +51,13 @@ elsif options['config'] != '.piwigo.conf'
   warn "Config file #{options['config']} not found; proceeding without it"
 end
 
-if options['file_file']
-  options['files'] += File.readlines(options['file_file']).map(&:chomp)
+ARGV.each do |file|
+  if file.start_with? '@'
+    file_file = file[1..]
+    options['files'] += File.readlines(file_file).map(&:chomp)
+  else
+    options['files'] << file
+  end
 end
 
 %w[base_uri username password category_id].each do |key|

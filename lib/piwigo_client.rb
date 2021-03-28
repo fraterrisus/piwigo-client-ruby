@@ -3,6 +3,7 @@
 require_relative 'requests/base_request'
 require_relative 'requests/authenticated_request'
 
+require_relative 'requests/add_category'
 require_relative 'requests/check_session_status'
 require_relative 'requests/create_session'
 require_relative 'requests/get_categories'
@@ -20,6 +21,12 @@ class PiwigoClient
     @password = password
 
     @logger = Logger.new($stderr)
+  end
+
+  def add_category(name, parent_id = nil, privacy = nil)
+    opts = basic_options.merge(cat_name: name, parent_id: parent_id, privacy: privacy).compact
+    req = Requests::AddCategory.new(**opts).run
+    req.new_album_id
   end
 
   def login

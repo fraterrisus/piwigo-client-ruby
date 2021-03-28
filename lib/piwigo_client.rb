@@ -6,6 +6,7 @@ require_relative 'requests/authenticated_request'
 require_relative 'requests/add_category'
 require_relative 'requests/check_session_status'
 require_relative 'requests/create_session'
+require_relative 'requests/destroy_session'
 require_relative 'requests/get_categories'
 require_relative 'requests/upload_image_chunk'
 
@@ -33,6 +34,14 @@ class PiwigoClient
     opts = basic_options.merge({ username: username, password: password })
     req = Requests::CreateSession.new(**opts).run
     @pwg_id = req.pwg_id
+    nil
+  end
+
+  def logout
+    opts = basic_options
+    Requests::DestroySession.new(**opts).run
+    @pwg_id = nil
+    @pwg_token = nil
     nil
   end
 

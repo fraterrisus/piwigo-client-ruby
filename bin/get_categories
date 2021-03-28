@@ -38,5 +38,7 @@ end
 client = PiwigoClient.new(base_uri: options[:base_uri], username: options[:username],
   password: options[:password])
 client.login
-client.check_session_status
+
 print_categories(client.get_categories)
+
+client.logout

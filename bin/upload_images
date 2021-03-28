@@ -3,6 +3,7 @@
 require_relative '../lib/piwigo_client'
 
 require 'optparse'
+require 'progress_bar'
 
 options = {
   'config' => '.piwigo.conf',
@@ -74,15 +75,18 @@ unless options['files'].any?
   exit
 end
 
+total_data = options['files'].map { |f| File.stat(f).size }.sum
+
 puts "Connecting to Piwigo at #{options['base_uri']} with username #{options['username']}"
 client = PiwigoClient.new(base_uri: options['base_uri'], username: options['username'],
   password: options['password'])
 client.login
 client.check_session_status
 
+pbar = ProgressBar.new(total_data, :bar, :percentage, :eta)
 options['files'].each do |filename|
-  puts "Uploading #{filename}"
-  client.upload_file(filename, options['category_id'])
+  pbar.puts "Uploading #{filename}"
+  client.upload_file(filename, options['category_id'], pbar)
 end
 
 client.logout

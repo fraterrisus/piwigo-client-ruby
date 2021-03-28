@@ -14,7 +14,7 @@ require_relative 'requests/upload_image_chunk'
 class PiwigoClient
   require 'logger'
 
-  attr_accessor :pwg_id
+  attr_accessor :chunk_size, :pwg_id
 
   def initialize(base_uri:, username:, password:)
     @base_uri = base_uri
@@ -57,25 +57,23 @@ class PiwigoClient
     req.categories
   end
 
-  def upload_file(filename, category_id)
-    puts "Reading #{filename}"
-
+  def upload_file(filename, category_id, progress_bar = nil)
     image_filename = File.basename(filename)
     image_extension = filename.match(/\.[^.]+\z/).to_s
 
     file_chunks = get_file_chunks(filename)
     file_chunks.each_with_index do |chunk_data, idx|
-      puts "Uploading chunk #{idx + 1} of #{file_chunks.length}"
       chunk_filename = "/tmp/piwigo_upload_data#{image_extension}"
       File.write(chunk_filename, chunk_data)
       upload_chunk(image_filename, category_id, chunk_filename, idx, file_chunks.length)
       File.unlink(chunk_filename)
+      progress_bar.increment!(chunk_data.length) if progress_bar
     end
   end
 
   private
 
-  attr_reader :base_uri, :chunk_size, :logger, :password, :pwg_token, :username
+  attr_reader :base_uri, :logger, :password, :pwg_token, :username
 
   def basic_options
     {}.tap do |opts|

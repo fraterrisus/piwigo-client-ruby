@@ -32,7 +32,7 @@ module Requests
     end
 
     def set_variables
-      raw_cookie = response.headers.to_h['set-cookie'].find { |c| c.start_with?('pwg_id=') }
+      raw_cookie = response.headers.to_h['set-cookie'].select { |c| c.start_with?('pwg_id=') }.last
       return unless raw_cookie
 
       tokens = raw_cookie.split('=', 2)

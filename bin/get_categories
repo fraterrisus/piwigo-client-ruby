@@ -1,0 +1,42 @@
+#!/usr/bin/env ruby
+
+require_relative '../lib/piwigo_client'
+
+require 'optparse'
+
+options = {
+  base_uri: ARGV.shift
+}
+
+parser = OptionParser.new do |opts|
+  opts.banner = "Usage: #{$0} [base_uri] --username user --password pass"
+  opts.on('-u', '--username USERNAME', 'Username (required)') { |u| options[:username] = u }
+  opts.on('-p', '--password PASSWORD', 'Password (required)') { |p| options[:password] = p }
+
+  opts.on('-h', '--help', 'Prints this help') do
+    puts opts
+    exit
+  end
+end
+
+parser.parse!
+
+unless options[:username] && options[:password]
+  puts parser
+  exit
+end
+
+def print_categories(cats, level = 0)
+  return unless cats
+  cats.each do |cat|
+    print '  ' * level
+    puts "(#{cat['id']}) #{cat['name']}"
+    print_categories(cat['sub_categories'], level + 1)
+  end
+end
+
+client = PiwigoClient.new(base_uri: options[:base_uri], username: options[:username],
+  password: options[:password])
+client.login
+client.check_session_status
+print_categories(client.get_categories)

@@ -49,7 +49,7 @@ parser.parse!
 
 if File.exist?(options['config'])
   begin
-    options = JSON.parse(File.read('.piwigo.conf')).merge(options)
+    options = JSON.parse(File.read(options['config'])).merge(options)
   rescue JSON::ParserError
     puts "Error reading #{options['config']}; is it a JSON file?"
   end
@@ -79,10 +79,11 @@ puts "Connecting to Piwigo at #{options['base_uri']} with username #{options['us
 client = PiwigoClient.new(base_uri: options['base_uri'], username: options['username'],
   password: options['password'])
 client.login
+client.check_session_status
 
 options['files'].each do |filename|
   puts "Uploading #{filename}"
-  # client.upload_file(filename, options['category_id'])
+  client.upload_file(filename, options['category_id'])
 end
 
 client.logout

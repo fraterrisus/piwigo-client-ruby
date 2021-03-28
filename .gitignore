@@ -1,2 +1,3 @@
 # ignore any imported perl scripts
 *.pl
+.piwigo.conf

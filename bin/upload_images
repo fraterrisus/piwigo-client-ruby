@@ -11,12 +11,18 @@ def convert_category(client, cat_name)
   categories = client.get_categories(false).map { |c| [c['id'], c] }.to_h
   matches = categories.keys.select { |id| categories[id]['name'].casecmp(cat_name).zero? }
 
-  if matches.count.zero?
+  unless matches.any?
     $stderr.puts "No matches found for category '#{cat_name}'"
     exit 1
   end
 
-  return matches.first if matches.count == 1
+  if matches.count == 1
+    match = matches.first
+    parent_ids = categories[match]['uppercats'].split(',').map(&:to_i)
+    fullname = parent_ids.map { |cid| categories[cid]['name'] }.join('::')
+    $stderr.puts "Uploading to category #{match} #{fullname}"
+    return match
+  end
 
   $stderr.puts "Multiple matches found for category '#{cat_name}':"
   matches.each do |id|
@@ -133,9 +139,7 @@ client.login
 client.check_session_status
 
 if options['category'].is_a?(String)
-  cat_name = options['category']
-  options['category'] = convert_category(client, cat_name)
-  puts "Uploading to category #{options['category']} \"#{cat_name}\""
+  options['category'] = convert_category(client, options['category'])
 end
 
 pbar = ProgressBar.new(total_data, :bar, :percentage, :eta)

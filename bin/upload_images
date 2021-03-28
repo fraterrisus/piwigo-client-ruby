@@ -1,0 +1,83 @@
+#!/usr/bin/env ruby
+
+require_relative '../lib/piwigo_client'
+
+require 'optparse'
+
+options = {
+  'files' => []
+}
+
+if File.exist?('.piwigo.conf')
+  begin
+    options.merge!(JSON.parse(File.read('.piwigo.conf')))
+  rescue JSON::ParserError
+    puts "Error reading .piwigo.conf; is it a JSON file?"
+  end
+end
+
+parser = OptionParser.new do |opts|
+  opts.banner = "Usage: #{$0} [options]"
+
+  opts.on('-h', '--help', 'Prints this help') do
+    puts opts
+    exit
+  end
+
+  opts.separator ''
+  opts.separator 'Connection options (required):'
+  opts.on('-b', '--base_uri HOSTNAME', 'Hostname of Piwigo server') do |o|
+    options['base_uri'] = o
+  end
+  opts.on('-u', '--username USERNAME', 'Username') { |u| options['username'] = u }
+  opts.on('-p', '--password PASSWORD', 'Password') { |p| options['password'] = p }
+
+  opts.separator ''
+  opts.separator 'Image selection options:'
+  opts.on('-c', '--category ID', 'Piwigo category to upload files into (required)') do |o|
+    options['category_id'] = o
+  end
+  opts.on('-f', '--file FILENAME', 'File to upload; can be called multiple times. If FILENAME' \
+    ' starts with @, a list of files to upload will be read from that file.') do |o|
+    if o.start_with? '@'
+      options['file_file'] = o[1..]
+    else
+      options['files'] << o
+    end
+  end
+
+  opts.separator ''
+  opts.separator 'Options will also be read from .piwigo.conf (in JSON format) if it exists in ' \
+    'the current directory.'
+end
+
+parser.parse!
+
+if options['file_file']
+  options['files'] += File.readlines(options['file_file']).map(&:chomp)
+end
+
+%w[base_uri username password category_id].each do |key|
+  unless key
+    $stderr.puts "Error: You must set a value for #{key}"
+    puts parser
+    exit
+  end
+end
+
+unless options['files'].any?
+  $stderr.puts "Error: You must specify one or more files to upload."
+  puts parser
+  exit
+end
+
+client = PiwigoClient.new(base_uri: options['base_uri'], username: options['username'],
+  password: options['password'])
+client.login
+
+options['files'].each do |filename|
+  puts "Uploading #{filename}"
+  client.upload_file(filename, options['category_id'])
+end
+
+client.logout

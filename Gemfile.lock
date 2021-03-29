@@ -18,7 +18,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  httparty
+  httparty (~> 0.18)
   progress_bar (~> 1.3)
 
 BUNDLED WITH

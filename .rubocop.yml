@@ -1,8 +1,5 @@
-
 AllCops:
   NewCops: enable
-  Exclude:
-    - 'bin/*'
 
 Layout/ArgumentAlignment:
   Enabled: false

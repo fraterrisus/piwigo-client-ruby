@@ -2,6 +2,11 @@
 
 require_relative 'uploader_error'
 
+# Pulls the list of categories from the server and attempts to match the input string against the
+# list of category names.
+# - Performs a case-insensitive match.
+# - Matches only the whole name, not partial names.
+# - Does NOT currently recognize "full names", i.e. category paths with :: as the separator.
 class CategoryMatcher
   def initialize(client)
     @client = client
@@ -29,21 +34,21 @@ class CategoryMatcher
     matches = categories.keys.select { |id| categories[id]['name'].casecmp(cat_name).zero? }
 
     unless matches.any?
-      $stderr.puts "No matches found for category '#{cat_name}'"
+      puts "No matches found for category '#{cat_name}'"
       raise UploaderError
     end
 
     if matches.count == 1
       category_id = matches.first
       full_name = full_category_name(categories, category_id)
-      $stderr.puts "Uploading to category #{category_id} #{full_name}"
+      puts "Uploading to category #{category_id} #{full_name}"
       return category_id
     end
 
-    $stderr.puts "Multiple matches found for category '#{cat_name}':"
+    puts "Multiple matches found for category '#{cat_name}':"
     matches.each do |id|
       full_name = full_category_name(categories, match)
-      $stderr.puts "  (#{id}) #{full_name}"
+      puts "  (#{id}) #{full_name}"
     end
     raise UploaderError
   end

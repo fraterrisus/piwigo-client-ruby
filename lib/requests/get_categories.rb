@@ -1,13 +1,16 @@
 # frozen_string_literal: true
 
 module Requests
+  # Fetch the list of categories from the server.
+  # Non-standard Arguments:
+  #   :tree (boolean, default true) Return data in a tree structure (true) or flat (false)
   class GetCategories < AuthenticatedRequest
     attr_reader :categories
 
     def initialize(**opts)
       super(opts)
 
-      @tree_output = (opts.key?(:tree)) ? opts[:tree] : true
+      @tree_output = opts.key?(:tree) ? opts[:tree] : true
     end
 
     private

@@ -2,6 +2,15 @@
 
 module Requests
   # Pushes one chunk (of possibly many) of a new image file to Piwigo.
+  # Non-standard Arguments:
+  #   :category_id (int) Destination of uploaded file
+  #   :chunk_data (File) A File object containing the data to upload. This must be a File in
+  #     order to make the multipart form upload work correctly.
+  #   :chunk_num (int) Sequence number of this chunk; 0-indexed, so should always be strictly
+  #     less than :max_chunks
+  #   :filename (string) Name of the file being uploaded
+  #   :max_chunks (int) Number of chunks expected for this file
+  #   :pwg_token (string) The logged-in user's API token
   class UploadImageChunk < AuthenticatedRequest
     REQUIRED_OPTS = %i[category_id chunk_data chunk_num filename max_chunks pwg_token].freeze
 
@@ -59,7 +68,7 @@ module Requests
         json_body = JSON.parse(response.body)
         raise("Upload Chunk request failed: #{json_body['message']}") unless json_body['stat'] == 'ok'
       rescue JSON::ParserError
-        $stderr.puts response.body
+        puts response.body
         raise("Upload Chunk request failed (response code #{response.code})")
       end
     end

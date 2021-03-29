@@ -1,4 +1,5 @@
 #!/usr/bin/env ruby
+# frozen_string_literal: true
 
 require 'progress_bar'
 
@@ -23,7 +24,7 @@ begin
   category_id = CategoryMatcher.new(client).lookup(options.category)
 
   pbar = ProgressBar.new(total_data, :bar, :percentage, :eta)
-  file_data.keys.each do |filename|
+  file_data.each_key do |filename|
     pbar.puts "Uploading #{filename}"
     client.upload_file(filename, category_id, pbar)
   end

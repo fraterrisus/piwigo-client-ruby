@@ -2,6 +2,8 @@
 
 require 'optparse'
 
+# Build an OptionParser to parse the command line; then extract the list of files from it,
+# handling both @file lists as well as recursing into directories.
 class UploaderOptionParser
   Options = Struct.new(:base_uri, :category, :config, :password, :recurse, :username,
     keyword_init: true)
@@ -15,13 +17,16 @@ class UploaderOptionParser
     options.config = '.piwigo.conf'
 
     build_parser(command_line)
-    # pp options.to_h
 
-    load_options_from_config_file
-    # pp options.to_h
-
-    check_for_required_keys
-    get_file_data
+    begin
+      load_options_from_config_file
+      check_for_required_keys
+      build_file_data
+    rescue UploaderError
+      puts
+      puts @parser
+      exit 1
+    end
   end
 
   def to_s
@@ -32,7 +37,7 @@ class UploaderOptionParser
 
   def build_parser(command_line)
     @parser = OptionParser.new do |opts|
-      opts.banner = "Usage: #{$0} [options] -c category (file | @list)..."
+      opts.banner = "Usage: #{$PROGRAM_NAME} [options] -c category (file | @list)..."
 
       opts.separator ''
       docstring = 'Set location of JSON configuration file (default: .piwigo.conf).'
@@ -68,11 +73,15 @@ class UploaderOptionParser
   def load_options_from_config_file
     if File.exist?(options.config)
       begin
-        file_options = JSON.parse(File.read(options.config)).map { |k, v| [k.to_sym, v] }.to_h
+        file_options = JSON.parse(File.read(options.config)).transform_keys(&:to_sym)
         options_hash = file_options.merge(options.to_h.compact)
         @options = Options.new(**options_hash)
       rescue JSON::ParserError
         puts "Error reading #{options.config}; is it a JSON file?"
+        raise UploaderError
+      rescue ArgumentError => e
+        puts "Error reading #{options.config}: #{e.message}"
+        raise UploaderError
       end
     elsif options.config != '.piwigo.conf'
       warn "Config file #{options.config} not found; proceeding without it"
@@ -81,11 +90,10 @@ class UploaderOptionParser
 
   def check_for_required_keys
     %w[base_uri username password category].each do |key|
-      unless options[key]
-        $stderr.puts "Error: You must set a value for #{key}"
-        puts parser
-        exit
-      end
+      next if options[key]
+
+      puts "Error: You must set a value for #{key}"
+      raise UploaderError
     end
   end
 
@@ -95,7 +103,7 @@ class UploaderOptionParser
         if filename.start_with?('@')
           file_file = filename[1..]
           unless File.exist?(file_file)
-            $stderr.puts "Error: @file #{file_file} not found"
+            puts "Error: @file #{file_file} not found"
             raise UploaderError
           end
           file_list += File.readlines(file_file).map(&:chomp)
@@ -106,7 +114,8 @@ class UploaderOptionParser
     end
   end
 
-  def handle_directories(raw_list, recurse = false)
+  def handle_directories(files:, recurse: false)
+    raw_list = files
     [].tap do |file_list|
       until raw_list.empty?
         work_list = raw_list
@@ -129,28 +138,26 @@ class UploaderOptionParser
   def get_file_sizes(file_list)
     errors = []
     file_sizes = file_list.map do |filename|
-      begin
-        [filename, File.stat(filename).size]
-      rescue Errno::ENOENT
-        errors << filename
-      end
+      [filename, File.stat(filename).size]
+    rescue Errno::ENOENT
+      errors << filename
     end.to_h
 
     if errors.any?
-      errors.each { |filename| $stderr.puts "Error: couldn't find file #{filename}" }
+      errors.each { |filename| puts "Error: couldn't find file #{filename}" }
       raise UploaderError
     end
 
     file_sizes
   end
 
-  def get_file_data
+  def build_file_data
     file_list = handle_file_files(ARGV)
-    file_list = handle_directories(file_list, options.recurse)
+    file_list = handle_directories(files: file_list, recurse: options.recurse)
     file_data = get_file_sizes(file_list)
 
     unless file_data.any?
-      $stderr.puts "Error: You must specify one or more files to upload."
+      puts 'Error: You must specify one or more files to upload.'
       raise UploaderError
     end
 

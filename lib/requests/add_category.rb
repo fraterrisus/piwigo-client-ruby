@@ -1,8 +1,13 @@
 # frozen_string_literal: true
 
 module Requests
+  # Creates a new category and returns its ID.
+  # Non-standard Arguments:
+  #   :cat_name (string) Name of new category
+  #   :parent_id (int, optional) ID of parent category, or nil for a new top-level category
+  #   :privacy (string, optional) Must be 'public' or 'private'
   class AddCategory < AuthenticatedRequest
-    REQUIRED_OPTIONS = %i[cat_name]
+    REQUIRED_OPTIONS = %i[cat_name].freeze
 
     attr_reader :new_album_id
 
@@ -36,7 +41,7 @@ module Requests
         name: cat_name,
         parent: parent_id,
         comment: nil, # string
-        commentable: nil, #boolean
+        commentable: nil, # boolean
         visible: nil, # boolean
         status: privacy
       }.compact

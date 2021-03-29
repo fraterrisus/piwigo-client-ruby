@@ -68,7 +68,7 @@ class PiwigoClient
       File.write(chunk_filename, chunk_data)
       upload_chunk(image_filename, category_id, chunk_filename, idx, file_chunks.length)
       File.unlink(chunk_filename)
-      progress_bar.increment!(chunk_data.length) if progress_bar
+      progress_bar&.increment!(chunk_data.length)
     end
   end
 

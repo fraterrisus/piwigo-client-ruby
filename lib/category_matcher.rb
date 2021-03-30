@@ -12,11 +12,11 @@ class CategoryMatcher
     @client = client
   end
 
-  def lookup(category)
-    if category.match(/\A\d+\z/)
-      category.to_i
+  def lookup(options)
+    if options.category.match(/\A\d+\z/)
+      options.category.to_i
     else
-      convert_category(category)
+      convert_category(options.category, options.create)
     end
   end
 
@@ -29,13 +29,13 @@ class CategoryMatcher
     parent_ids.map { |parent_id| categories[parent_id]['name'] }.join('::')
   end
 
-  def convert_category(cat_name)
+  def convert_category(cat_name, autocreate)
     categories = client.get_categories(false).map { |c| [c['id'], c] }.to_h
     matches = categories.keys.select { |id| categories[id]['name'].casecmp(cat_name).zero? }
 
     unless matches.any?
-      print "No matches found for category '#{cat_name}'. Create it (y/N)? "
-      if $stdin.gets.chomp.downcase == 'y'
+      print "No matches found for category '#{cat_name}'. Create it (y/N)? " unless autocreate
+      if autocreate || $stdin.gets.chomp.downcase == 'y'
         category_id = client.add_category(cat_name)
         puts "Created category #{category_id} #{cat_name}"
         return category_id

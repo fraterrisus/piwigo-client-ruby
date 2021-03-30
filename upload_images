@@ -21,7 +21,7 @@ client.login
 begin
   client.check_session_status
 
-  category_id = CategoryMatcher.new(client).lookup(options.category)
+  category_id = CategoryMatcher.new(client).lookup(options)
 
   pbar = ProgressBar.new(total_data, :bar, :percentage, :eta)
   file_data.each_key do |filename|

@@ -5,17 +5,14 @@ require 'optparse'
 # Build an OptionParser to parse the command line; then extract the list of files from it,
 # handling both @file lists as well as recursing into directories.
 class UploaderOptionParser
-  Options = Struct.new(:base_uri, :category, :config, :password, :recurse, :username,
+  Options = Struct.new(:base_uri, :category, :config, :create, :password, :recurse, :username,
     keyword_init: true)
 
   attr_reader :files, :options, :parser
 
   def initialize(command_line)
     @files = []
-
-    @options = Options.new
-    options.config = '.piwigo.conf'
-
+    @options = Options.new(config: '.piwigo.conf', create: false, recurse: false)
     build_parser(command_line)
 
     begin
@@ -59,6 +56,8 @@ class UploaderOptionParser
       opts.on('-c', '--category ID', docstring) { |o| options.category = o }
       docstring = 'Recurse into directories (default: off)'
       opts.on('-r', '--recurse', TrueClass, docstring) { |o| options.recurse = o }
+      docstring = "Create category by name if it doesn't exist (default: ask)"
+      opts.on('--create', TrueClass, docstring) { |o| options.create = o }
 
       opts.separator ''
       opts.separator 'Specifying files:'

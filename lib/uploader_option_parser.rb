@@ -11,9 +11,9 @@ class UploaderOptionParser
   attr_reader :files, :options, :parser
 
   def initialize(command_line)
-    @files = []
     @options = Options.new(config: '.piwigo.conf', create: false, recurse: false)
-    build_parser(command_line)
+    @parser = build_parser
+    @parser.parse!(command_line)
 
     begin
       load_options_from_config_file
@@ -32,8 +32,8 @@ class UploaderOptionParser
 
   private
 
-  def build_parser(command_line)
-    @parser = OptionParser.new do |opts|
+  def build_parser
+    OptionParser.new do |opts|
       opts.banner = "Usage: #{$PROGRAM_NAME} [options] -c category (file | @list)..."
 
       opts.separator ''
@@ -65,8 +65,6 @@ class UploaderOptionParser
       opts.separator '  If a filename starts with @, it will be treated as a newline-separated list of files.'
       opts.separator '  Directories will be skipped unless -r is turned on.'
     end
-
-    @parser.parse!(command_line)
   end
 
   def load_options_from_config_file

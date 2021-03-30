@@ -34,8 +34,14 @@ class CategoryMatcher
     matches = categories.keys.select { |id| categories[id]['name'].casecmp(cat_name).zero? }
 
     unless matches.any?
-      puts "No matches found for category '#{cat_name}'"
-      raise UploaderError
+      print "No matches found for category '#{cat_name}'. Create it (y/N)? "
+      if $stdin.gets.chomp.downcase == 'y'
+        category_id = client.add_category(cat_name)
+        puts "Created category #{category_id} #{cat_name}"
+        return category_id
+      else
+        exit 0
+      end
     end
 
     if matches.count == 1

@@ -9,6 +9,8 @@ module Requests
 
     ENDPOINT = '/ws.php'
 
+    # debug_output $stderr
+
     def initialize(**opts)
       self.class.base_uri(opts[:base_uri]) if opts.key?(:base_uri)
       # logger_level = opts[:logger_level] || :info

@@ -5,6 +5,7 @@ class Filelike
   def initialize(filename, data)
     @filename = filename
     @data = data
+    @data.force_encoding('UTF-8')
 
     match_data = filename.match(/\.([^.]+)\z/)
     @content_type = case match_data[1]

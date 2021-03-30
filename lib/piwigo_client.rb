@@ -63,9 +63,10 @@ class PiwigoClient
     image_filename = File.basename(filename).encode('UTF-8')
     chunks = split_file(filename)
     chunks.each_with_index do |chunk_data, idx|
+      chunk_size = chunk_data.size
       chunk_file = Filelike.new(image_filename, chunk_data)
       upload_chunk(image_filename, category_id, chunk_file, idx, chunks.size)
-      progress_bar&.increment!(chunk_data.size)
+      progress_bar&.increment!(chunk_size)
     end
   end
 
@@ -85,7 +86,10 @@ class PiwigoClient
   def split_file(filename)
     [].tap do |chunks|
       File.open(filename, 'rb:UTF-8') do |f|
-        chunks << f.read(chunk_size) until f.eof?
+        until f.eof?
+          chunk = f.read(chunk_size)
+          chunks << chunk unless chunk&.empty?
+        end
       end
     end
   end

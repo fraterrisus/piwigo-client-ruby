@@ -1,7 +1,8 @@
 # frozen_string_literal: true
 
 module Requests
-  # Parent class for all Piwigo requests.
+  # Parent class for all Piwigo requests. Most of the private methods can (and should) be overridden
+  # by implementation classes.
   class BaseRequest
     require 'httparty'
     include HTTParty
@@ -12,8 +13,6 @@ module Requests
       self.class.base_uri(opts[:base_uri]) if opts.key?(:base_uri)
       # logger_level = opts[:logger_level] || :info
       # self.class.logger(opts[:logger], logger_level) if opts.key?(:logger)
-
-      # self.class.debug_output($stderr)
     end
 
     def run

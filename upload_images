@@ -3,12 +3,11 @@
 
 require 'progress_bar'
 
-require_relative 'lib/piwigo_client'
 require_relative 'lib/category_matcher'
-require_relative 'lib/uploader_option_parser'
-require_relative 'lib/uploader_error'
+require_relative 'lib/piwigo_client'
+require_relative 'lib/piwigo_option_parser'
 
-parser = UploaderOptionParser.new(ARGV)
+parser = PiwigoOptionParser.new(ARGV)
 options = parser.options
 file_data = parser.files
 total_data = file_data.values.sum

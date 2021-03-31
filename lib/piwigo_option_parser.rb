@@ -2,9 +2,10 @@
 
 require 'optparse'
 
-# Build an OptionParser to parse the command line; then extract the list of files from it,
-# handling both @file lists as well as recursing into directories.
-class UploaderOptionParser
+require_relative './file_list_builder'
+
+# Build an OptionParser to parse the command line; then extract the list of files from it.
+class PiwigoOptionParser
   Options = Struct.new(:base_uri, :category, :config, :create, :password, :recurse, :username,
     keyword_init: true)
 
@@ -18,7 +19,7 @@ class UploaderOptionParser
     begin
       load_options_from_config_file
       check_for_required_keys
-      build_file_data
+      build_file_list(command_line)
     rescue UploaderError
       puts
       puts @parser
@@ -94,70 +95,7 @@ class UploaderOptionParser
     end
   end
 
-  def handle_file_files(raw_list)
-    [].tap do |file_list|
-      raw_list.each do |filename|
-        if filename.start_with?('@')
-          file_file = filename[1..]
-          unless File.exist?(file_file)
-            puts "Error: @file #{file_file} not found"
-            raise UploaderError
-          end
-          file_list += File.readlines(file_file).map(&:chomp)
-        else
-          file_list << filename
-        end
-      end
-    end
-  end
-
-  def handle_directories(files:, recurse: false)
-    raw_list = files
-    [].tap do |file_list|
-      until raw_list.empty?
-        work_list = raw_list
-        raw_list = []
-        work_list.each do |filename|
-          if File.directory?(filename)
-            if recurse
-              raw_list += Dir.glob("#{filename}/*")
-            else
-              warn "Skipping directory #{filename}"
-            end
-          else
-            file_list << filename
-          end
-        end
-      end
-    end
-  end
-
-  def get_file_sizes(file_list)
-    errors = []
-    file_sizes = file_list.map do |filename|
-      [filename, File.stat(filename).size]
-    rescue Errno::ENOENT
-      errors << filename
-    end.to_h
-
-    if errors.any?
-      errors.each { |filename| puts "Error: couldn't find file #{filename}" }
-      raise UploaderError
-    end
-
-    file_sizes
-  end
-
-  def build_file_data
-    file_list = handle_file_files(ARGV)
-    file_list = handle_directories(files: file_list, recurse: options.recurse)
-    file_data = get_file_sizes(file_list)
-
-    unless file_data.any?
-      puts 'Error: You must specify one or more files to upload.'
-      raise UploaderError
-    end
-
-    @files = file_data
+  def build_file_list(command_line)
+    @files = FileListBuilder.new(files: command_line, recurse: options.recurse).build
   end
 end

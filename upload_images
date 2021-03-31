@@ -4,6 +4,7 @@
 require 'progress_bar'
 
 require_relative 'lib/category_matcher'
+require_relative 'lib/config_writer'
 require_relative 'lib/piwigo_client'
 require_relative 'lib/piwigo_option_parser'
 
@@ -12,22 +13,34 @@ options = parser.options
 file_data = parser.files
 total_data = file_data&.values&.sum
 
-puts "Connecting to Piwigo at #{options.base_uri} with username #{options.username}"
-client = PiwigoClient.new(base_uri: options.base_uri, username: options.username,
-  password: options.password)
-client.login
+client = PiwigoClient.new(base_uri: options.base_uri)
+if options.authorization
+  puts "Connecting to Piwigo at #{options.base_uri} with saved session token"
+  client.pwg_id = options.authorization
+else
+  puts "Connecting to Piwigo at #{options.base_uri} with username #{options.username}"
+  client.login(username: options.username, password: options.password)
+end
 
 begin
   client.check_session_status
 
   category_id = CategoryMatcher.new(client).lookup(options)
-  exit(0) if category_id.negative?
 
-  pbar = ProgressBar.new(total_data, :bar, :percentage, :eta)
-  file_data.each_key do |filename|
-    pbar.puts "Uploading #{filename}"
-    client.upload_file(filename, category_id, pbar)
+  unless category_id.negative?
+    pbar = ProgressBar.new(total_data, :bar, :percentage, :eta)
+    file_data.each_key do |filename|
+      pbar.puts "Uploading #{filename}"
+      client.upload_file(filename, category_id, pbar)
+    end
   end
 ensure
-  client.logout
+  if options.persist_auth
+    ConfigWriter.update(parser.config, :authorization, client.pwg_id)
+  else
+    # FIXME: destroy token in config file if it exists?
+    puts "Ending session."
+    # FIXME: it doesn't look like Piwigo actually destroys sessions when you logout
+    client.logout
+  end
 end

@@ -8,7 +8,7 @@ require_relative 'uploader_error'
 
 # Build an OptionParser to parse the command line; then extract the list of files from it.
 class PiwigoOptionParser
-  attr_reader :files, :options, :parser
+  attr_reader :config, :files, :options, :parser
 
   def initialize(command_line)
     @config = '.piwigo.conf'
@@ -62,8 +62,9 @@ AUTHORIZATION
   You must either set --username and --password, or --authorization with the value of the PWG_ID
   cookie from a previous login session. We strongly recommend writing these values to a config
   file and using --config (or the default, .piwigo.conf) rather than specifying them on the
-  command line. Setting --persist-auth will attempt to write the PWG_ID token to the config file
-  at the end of the run so that it can be read in next time.
+  command line. Setting --persist-auth will write the PWG_ID token to the config file at the end of
+  the run so that the token can be read in next time. Without --persist-auth, the script will close
+  your session (logout) at the end of the run.
 
 CATEGORIES
   You must set --category with either a numeric category ID or a string. In the latter case, the
@@ -99,7 +100,8 @@ CONFIG FILE
   end
 
   def load_options_from_config_file
-    @options.apply_file(@config)
+    json = PiwigoOptions.read_config_file(@config)
+    @options.apply_defaults(json)
   end
 
   def check_for_required_keys

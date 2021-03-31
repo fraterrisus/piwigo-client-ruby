@@ -18,15 +18,12 @@ class PiwigoClient
 
   attr_accessor :pwg_id
 
-  def initialize(base_uri:, username:, password:)
+  def initialize(base_uri:)
     @base_uri = base_uri
-    @username = username
-    @password = password
-
     @logger = Logger.new($stderr)
   end
 
-  def login
+  def login(username:, password:)
     opts = basic_options.merge({ username: username, password: password })
     req = Requests::CreateSession.new(**opts).run
     @pwg_id = req.pwg_id
@@ -72,7 +69,7 @@ class PiwigoClient
 
   private
 
-  attr_reader :base_uri, :chunk_size, :logger, :password, :pwg_token, :username
+  attr_reader :base_uri, :chunk_size, :logger, :pwg_token
 
   def basic_options
     {}.tap do |opts|

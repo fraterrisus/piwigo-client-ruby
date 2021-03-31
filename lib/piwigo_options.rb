@@ -15,21 +15,6 @@ class PiwigoOptions
 
   attr_accessor(*KEYS)
 
-  def apply_file(filename)
-    if File.exist?(filename)
-      begin
-        file_options = JSON.parse(File.read(filename)).
-          transform_keys { |k| k.gsub('-', '_').to_sym }
-        apply_defaults(file_options)
-      rescue JSON::ParserError
-        puts "Error reading #{filename}; is it a JSON file?"
-        raise UploaderError
-      end
-    elsif filename != '.piwigo.conf'
-      warn "Config file #{filename} not found; proceeding without it"
-    end
-  end
-
   def apply_defaults(others)
     from_h(DEFAULTS.merge(others).merge(to_h.compact))
   end
@@ -50,5 +35,18 @@ class PiwigoOptions
 
   def self.from_h(hash)
     self.new.tap { |options| options.from_h(hash) }
+  end
+
+  def self.read_config_file(filename)
+    if File.exist?(filename)
+      begin
+        JSON.parse(File.read(filename)).transform_keys { |k| k.gsub('-', '_').to_sym }
+      rescue JSON::ParserError
+        puts "Error reading #{filename}; is it a JSON file?"
+        raise UploaderError
+      end
+    elsif filename != '.piwigo.conf'
+      warn "Config file #{filename} not found; proceeding without it"
+    end
   end
 end

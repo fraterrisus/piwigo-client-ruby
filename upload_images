@@ -10,7 +10,7 @@ require_relative 'lib/piwigo_option_parser'
 parser = PiwigoOptionParser.new(ARGV)
 options = parser.options
 file_data = parser.files
-total_data = file_data.values.sum
+total_data = file_data&.values&.sum
 
 puts "Connecting to Piwigo at #{options.base_uri} with username #{options.username}"
 client = PiwigoClient.new(base_uri: options.base_uri, username: options.username,
@@ -21,6 +21,7 @@ begin
   client.check_session_status
 
   category_id = CategoryMatcher.new(client).lookup(options)
+  exit(0) if category_id.negative?
 
   pbar = ProgressBar.new(total_data, :bar, :percentage, :eta)
   file_data.each_key do |filename|

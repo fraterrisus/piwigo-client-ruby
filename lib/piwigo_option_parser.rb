@@ -2,25 +2,27 @@
 
 require 'optparse'
 
-require_relative './file_list_builder'
+require_relative 'file_list_builder'
+require_relative 'piwigo_options'
+require_relative 'uploader_error'
 
 # Build an OptionParser to parse the command line; then extract the list of files from it.
 class PiwigoOptionParser
-  Options = Struct.new(:base_uri, :category, :config, :create, :password, :recurse, :username,
-    keyword_init: true)
-
   attr_reader :files, :options, :parser
 
   def initialize(command_line)
-    @options = Options.new(config: '.piwigo.conf', create: false, recurse: false)
+    @config = '.piwigo.conf'
+    @options = PiwigoOptions.new
     @parser = build_parser
     @parser.parse!(command_line)
 
     begin
       load_options_from_config_file
       check_for_required_keys
+      return if options.list_categories
       build_file_list(command_line)
-    rescue UploaderError
+    rescue UploaderError => e
+      puts e.message
       puts
       puts @parser
       exit 1
@@ -37,61 +39,76 @@ class PiwigoOptionParser
     OptionParser.new do |opts|
       opts.banner = "Usage: #{$PROGRAM_NAME} [options] -c category (file | @list)..."
 
-      opts.separator ''
-      docstring = 'Set location of JSON configuration file (default: .piwigo.conf).'
-      opts.on('--config FILE', docstring) { |o| options.config = o }
-      opts.on('-h', '--help', 'Prints this help') do
-        puts opts
-        exit
-      end
+      docstring = 'The value of the PWG_ID cookie'
+      opts.on('-a', '--authorization TOKEN', docstring) { |a| options.authorization = a }
 
-      opts.separator ''
-      opts.separator 'Connection options (required):'
-      opts.on('-b', '--base_uri HOSTNAME', 'Hostname of Piwigo server') { |o| options.base_uri = o }
-      opts.on('-u', '--username USERNAME', 'Username') { |u| options.username = u }
-      opts.on('-p', '--password PASSWORD', 'Password') { |p| options.password = p }
+      docstring = 'Piwigo URL (default: "http://localhost")'
+      opts.on('-b', '--base-uri HOSTNAME', docstring) { |o| options.base_uri = o }
 
-      opts.separator ''
-      opts.separator 'Image options:'
-      docstring = 'Piwigo category to upload files into (required)'
+      docstring = 'Piwigo category to upload files into (see CATEGORIES)'
       opts.on('-c', '--category ID', docstring) { |o| options.category = o }
-      docstring = 'Recurse into directories (default: off)'
-      opts.on('-r', '--recurse', TrueClass, docstring) { |o| options.recurse = o }
+
+      docstring = 'Set location of JSON configuration file (default: .piwigo.conf).'
+      opts.on('--config FILE', docstring) { |o| @config = o }
+
       docstring = "Create category by name if it doesn't exist (default: ask)"
       opts.on('--create', TrueClass, docstring) { |o| options.create = o }
 
-      opts.separator ''
-      opts.separator 'Specifying files:'
-      opts.separator '  List one or more files on the command line after the arguments.'
-      opts.separator '  If a filename starts with @, it will be treated as a newline-separated list of files.'
-      opts.separator '  Directories will be skipped unless -r is turned on.'
+      opts.on('-h', '--help', 'Prints some helpful information about using this script') do
+        puts opts
+        puts <<-EOF
+
+AUTHORIZATION
+  You must either set --username and --password, or --authorization with the value of the PWG_ID
+  cookie from a previous login session. We strongly recommend writing these values to a config
+  file and using --config (or the default, .piwigo.conf) rather than specifying them on the
+  command line. Setting --persist-auth will attempt to write the PWG_ID token to the config file
+  at the end of the run so that it can be read in next time.
+
+CATEGORIES
+  You must set --category with either a numeric category ID or a string. In the latter case, the
+  script will attempt to match an existing category name. Matches are whole-string, case-insensitive
+  (i.e. no partial matches). If no matching categories are found, you will be prompted to create the
+  category instead (unless --create, in which case creation happens without prompting).
+
+FILES
+  List one or files on the command line after the arguments. If a filename starts with @ it will be
+  treated as a newline-separated list of files. Directories will be skipped unless --recurse.
+
+CONFIG FILE
+  Configuration may be written to a config file in JSON format. By default the script looks for
+  its config in .piwigo.conf in the local directory. Command line options may be stored in the
+  config file by their long option name, i.e. "username", "password", "base-uri".
+        EOF
+        exit
+      end
+
+      docstring = "List categories by ID and name; don't upload anything"
+      opts.on('-l', '--list-categories', TrueClass, docstring) { |o| options.list_categories = o }
+
+      opts.on('-p', '--password PASSWORD', 'Password') { |p| options.password = p }
+
+      docstring = 'Save session to config file'
+      opts.on('--persist-auth', TrueClass, docstring) { |p| options.persist_auth = p }
+
+      docstring = 'Recurse into directories (default: off)'
+      opts.on('-r', '--recurse', TrueClass, docstring) { |o| options.recurse = o }
+
+      opts.on('-u', '--username USERNAME', 'Username') { |u| options.username = u }
     end
   end
 
   def load_options_from_config_file
-    if File.exist?(options.config)
-      begin
-        file_options = JSON.parse(File.read(options.config)).transform_keys(&:to_sym)
-        options_hash = file_options.merge(options.to_h.compact)
-        @options = Options.new(**options_hash)
-      rescue JSON::ParserError
-        puts "Error reading #{options.config}; is it a JSON file?"
-        raise UploaderError
-      rescue ArgumentError => e
-        puts "Error reading #{options.config}: #{e.message}"
-        raise UploaderError
-      end
-    elsif options.config != '.piwigo.conf'
-      warn "Config file #{options.config} not found; proceeding without it"
-    end
+    @options.apply_file(@config)
   end
 
   def check_for_required_keys
-    %w[base_uri username password category].each do |key|
-      next if options[key]
+    unless (options.username && options.password) || options.authorization
+      raise(UploaderError, "Error: You must set a username and password")
+    end
 
-      puts "Error: You must set a value for #{key}"
-      raise UploaderError
+    unless options.category || options.list_categories
+      raise(UploaderError, "Error: You must set a value for category")
     end
   end
 

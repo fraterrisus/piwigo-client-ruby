@@ -13,7 +13,10 @@ class CategoryMatcher
   end
 
   def lookup(options)
-    if options.category.match(/\A\d+\z/)
+    if options.list_categories
+      list_categories
+      -1
+    elsif options.category.match(/\A\d+\z/)
       options.category.to_i
     else
       convert_category(options.category, options.create)
@@ -30,7 +33,7 @@ class CategoryMatcher
   end
 
   def convert_category(cat_name, autocreate)
-    categories = client.get_categories(false).map { |c| [c['id'], c] }.to_h
+    categories = client.get_categories(tree: false).map { |c| [c['id'], c] }.to_h
     matches = categories.keys.select { |id| categories[id]['name'].casecmp(cat_name).zero? }
 
     unless matches.any?
@@ -57,5 +60,19 @@ class CategoryMatcher
       puts "  (#{id}) #{full_name}"
     end
     raise UploaderError
+  end
+
+  def print_category(category, level = 0)
+    print "  " * level
+    puts "[#{category['id']}] #{category['name']}"
+    category['sub_categories']&.each do |subcat|
+      print_category(subcat, level + 1)
+    end
+  end
+
+  def list_categories
+    client.get_categories(tree: true).each do |category|
+      print_category(category)
+    end
   end
 end

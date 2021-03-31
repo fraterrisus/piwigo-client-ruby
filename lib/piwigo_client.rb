@@ -16,7 +16,7 @@ require_relative './filelike'
 class PiwigoClient
   require 'logger'
 
-  attr_accessor :chunk_size, :pwg_id
+  attr_accessor :pwg_id
 
   def initialize(base_uri:, username:, password:)
     @base_uri = base_uri
@@ -53,7 +53,7 @@ class PiwigoClient
     req.new_album_id
   end
 
-  def get_categories(tree = nil)
+  def get_categories(tree: nil)
     opts = basic_options.merge({ tree: tree }.compact)
     req = Requests::GetCategories.new(**opts).run
     req.categories
@@ -72,7 +72,7 @@ class PiwigoClient
 
   private
 
-  attr_reader :base_uri, :logger, :password, :pwg_token, :username
+  attr_reader :base_uri, :chunk_size, :logger, :password, :pwg_token, :username
 
   def basic_options
     {}.tap do |opts|

@@ -14,33 +14,36 @@ file_data = parser.files
 total_data = file_data&.values&.sum
 
 client = PiwigoClient.new(base_uri: options.base_uri)
+success = false
+
 if options.authorization
   puts "Connecting to Piwigo at #{options.base_uri} with saved session token"
   client.pwg_id = options.authorization
-else
-  puts "Connecting to Piwigo at #{options.base_uri} with username #{options.username}"
-  client.login(username: options.username, password: options.password)
+  success = client.check_session_status
 end
 
-begin
-  client.check_session_status
+unless success
+  puts "Connecting to Piwigo at #{options.base_uri} with username #{options.username}"
+  client.login(username: options.username, password: options.password)
+  success = client.check_session_status
+end
 
-  category_id = CategoryMatcher.new(client).lookup(options)
-
-  unless category_id.negative?
-    pbar = ProgressBar.new(total_data, :bar, :percentage, :eta)
-    file_data.each_key do |filename|
-      pbar.puts "Uploading #{filename}"
-      client.upload_file(filename, category_id, pbar)
-    end
-  end
-ensure
+if success
   if options.persist_auth
     ConfigWriter.update(parser.config, :authorization, client.pwg_id)
-  else
-    # FIXME: destroy token in config file if it exists?
-    puts "Ending session."
-    # FIXME: it doesn't look like Piwigo actually destroys sessions when you logout
-    client.logout
+  end
+else
+  warn "Unable to log in!"
+  ConfigWriter.delete(parser.config, :authorization)
+  exit 1
+end
+
+category_id = CategoryMatcher.new(client).lookup(options)
+
+unless category_id.negative?
+  pbar = ProgressBar.new(total_data, :bar, :percentage, :eta)
+  file_data.each_key do |filename|
+    pbar.puts "Uploading #{filename}"
+    client.upload_file(filename, category_id, pbar)
   end
 end

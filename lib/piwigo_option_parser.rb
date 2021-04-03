@@ -60,11 +60,13 @@ class PiwigoOptionParser
 
 AUTHORIZATION
   You must either set --username and --password, or --authorization with the value of the PWG_ID
-  cookie from a previous login session. We strongly recommend writing these values to a config
-  file and using --config (or the default, .piwigo.conf) rather than specifying them on the
-  command line. Setting --persist-auth will write the PWG_ID token to the config file at the end of
-  the run so that the token can be read in next time. Without --persist-auth, the script will close
-  your session (logout) at the end of the run.
+  cookie from a previous login session. If the saved cookie doesn't work, the script will attempt
+  to fall back to logging in with username and password. 
+
+  We strongly recommend writing these values to a config file and using --config (or the default,
+  .piwigo.conf) rather than specifying them on the command line. Setting --persist-auth will write
+  the PWG_ID token to the (existing) config file at the end of the run so that the token can be
+  read in next time.
 
 CATEGORIES
   You must set --category with either a numeric category ID or a string. In the latter case, the

@@ -32,8 +32,9 @@ class PiwigoClient
 
   def check_session_status
     req = Requests::CheckSessionStatus.new(**basic_options).run
+    return false if req.auth_user == 'guest'
     @pwg_token = req.pwg_token
-    @chunk_size = req.chunk_size * 1000
+    @chunk_size = 1000 * (req.chunk_size || 0)
     true
   end
 

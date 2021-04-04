@@ -13,13 +13,21 @@ class CategoryMatcher
   end
 
   def lookup(options)
-    if options.list_categories
+    cat_id = if options.list_categories
       list_categories
       -1
     elsif options.category.match(/\A\d+\z/)
       options.category.to_i
     else
       convert_category(options.category, options.create)
+    end
+
+    if options.new_category
+      client.add_category(name: options.new_category, parent_id: cat_id)
+      puts "Created category #{category_id} #{cat_name} as child of category #{cat_id}"
+      -1
+    else
+      cat_id
     end
   end
 
@@ -39,7 +47,7 @@ class CategoryMatcher
     unless matches.any?
       print "No matches found for category '#{cat_name}'. Create it (y/N)? " unless autocreate
       if autocreate || $stdin.gets.chomp.downcase == 'y'
-        category_id = client.add_category(cat_name)
+        category_id = client.add_category(name: cat_name)
         puts "Created category #{category_id} #{cat_name}"
         return category_id
       else

@@ -67,7 +67,8 @@ class FileListBuilder
       [filename, File.stat(filename).size]
     rescue Errno::ENOENT
       errors << filename
-    end.to_h
+      nil
+    end.compact.to_h
 
     if errors.any?
       errors.each { |filename| puts "Error: couldn't find file #{filename}" }

@@ -45,7 +45,7 @@ class PiwigoClient
     nil
   end
 
-  def add_category(name, parent_id = nil, privacy = nil)
+  def add_category(name:, parent_id: nil, privacy: nil)
     opts = basic_options.merge(cat_name: name, parent_id: parent_id, privacy: privacy).compact
     req = Requests::AddCategory.new(**opts).run
     req.new_album_id

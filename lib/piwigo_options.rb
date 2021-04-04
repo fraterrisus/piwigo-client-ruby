@@ -3,8 +3,8 @@
 require_relative 'uploader_error'
 
 class PiwigoOptions
-  KEYS = %i[authorization base_uri category create list_categories password persist_auth recurse
-    username].freeze
+  KEYS = %i[authorization base_uri category create list_categories new_category password
+    persist_auth recurse username].freeze
 
   DEFAULTS = {
     base_uri: 'http://localhost',

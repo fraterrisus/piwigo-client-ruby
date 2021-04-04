@@ -64,7 +64,7 @@ AUTHORIZATION
   to fall back to logging in with username and password. 
 
   We strongly recommend writing these values to a config file and using --config (or the default,
-  .piwigo.conf) rather than specifying them on the command line. Setting --persist-auth will write
+  .piwigo.conf) rather than specifying them on the command line. Setting --save-auth will write
   the PWG_ID token to the (existing) config file at the end of the run so that the token can be
   read in next time.
 
@@ -89,10 +89,13 @@ CONFIG FILE
       docstring = "List categories by ID and name; don't upload anything"
       opts.on('-l', '--list-categories', TrueClass, docstring) { |o| options.list_categories = o }
 
+      docstring = "Create category as child of --category"
+      opts.on('-n', '--new-category NAME', docstring) { |o| options.new_category = o }
+
       opts.on('-p', '--password PASSWORD', 'Password') { |p| options.password = p }
 
       docstring = 'Save session to config file'
-      opts.on('--persist-auth', TrueClass, docstring) { |p| options.persist_auth = p }
+      opts.on('--save-auth', TrueClass, docstring) { |p| options.persist_auth = p }
 
       docstring = 'Recurse into directories (default: off)'
       opts.on('-r', '--recurse', TrueClass, docstring) { |o| options.recurse = o }

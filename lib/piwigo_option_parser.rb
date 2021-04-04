@@ -19,7 +19,7 @@ class PiwigoOptionParser
     begin
       load_options_from_config_file
       check_for_required_keys
-      return if options.list_categories
+      return if options.list_categories or options.new_category
       build_file_list(command_line)
     rescue UploaderError => e
       puts e.message

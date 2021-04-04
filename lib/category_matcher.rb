@@ -23,8 +23,8 @@ class CategoryMatcher
     end
 
     if options.new_category
-      client.add_category(name: options.new_category, parent_id: cat_id)
-      puts "Created category #{category_id} #{cat_name} as child of category #{cat_id}"
+      new_cat_id = client.add_category(name: options.new_category, parent_id: cat_id)
+      puts "Created category #{new_cat_id} #{options.new_category} as child of category #{cat_id}"
       -1
     else
       cat_id

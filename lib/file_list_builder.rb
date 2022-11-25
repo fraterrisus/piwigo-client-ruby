@@ -11,6 +11,7 @@ class FileListBuilder
   def build
     file_list = handle_file_files
     file_list = handle_directories(file_list)
+    file_list = remove_bad_filetypes(file_list)
     file_data = get_file_sizes(file_list)
 
     unless file_data.any?
@@ -25,20 +26,20 @@ class FileListBuilder
 
   def handle_file_files
     raw_list = @files.dup
-    [].tap do |file_list|
-      raw_list.each do |filename|
-        if filename.start_with?('@')
-          file_file = filename[1..]
-          unless File.exist?(file_file)
-            puts "Error: @file #{file_file} not found"
-            raise UploaderError
-          end
-          file_list += File.readlines(file_file).map(&:chomp)
-        else
-          file_list << filename
+    file_list = []
+    raw_list.each do |filename|
+      if filename.start_with?('@')
+        file_file = filename[1..]
+        unless File.exist?(file_file)
+          puts "Error: @file #{file_file} not found"
+          raise UploaderError
         end
+        file_list += File.readlines(file_file).map(&:chomp)
+      else
+        file_list << filename
       end
     end
+    file_list
   end
 
   def handle_directories(raw_list)
@@ -76,5 +77,13 @@ class FileListBuilder
     end
 
     file_sizes
+  end
+
+  BAD_FILETYPES = %i(mp3 mp4 mpg rm sh wmv zip)
+
+  def remove_bad_filetypes(file_list)
+    file_list.reject do |f|
+      BAD_FILETYPES.map { |t| f.end_with?(".#{t}") }.reduce(&:|)
+    end
   end
 end
